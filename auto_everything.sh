@@ -121,7 +121,7 @@ normalize_proxy() {
 collect_proxies() {
   local tmp_file
   tmp_file="$(mktemp)"
-  trap 'rm -f "$tmp_file"' EXIT
+  trap 'if [ -n "${tmp_file:-}" ] && [ -f "${tmp_file:-}" ]; then rm -f "${tmp_file:-}"; fi' EXIT
 
   cat <<'EOF'
 Incolla i proxy (uno per riga), poi scrivi END e premi Invio.
