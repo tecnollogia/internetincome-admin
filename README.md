@@ -1,110 +1,135 @@
-﻿# InternetIncome EarnApp Admin Stack
+# InternetIncome EarnApp Admin (Guida Passo-Passo)
 
-Stack ottimizzato per Raspberry Pi e mini PC 4GB:
-- solo EarnApp
-- Docker + proxy
-- dashboard admin moderna
-- monitoraggio continuo + auto-healing
-- host guard con escalation anti-crash (fino a reboot opzionale)
+Questa versione usa solo **EarnApp + proxy + Docker** con dashboard web.
 
-## Funzioni principali
-- Start graduale degli stack (evita picchi su hardware debole)
-- Routing DNS via SOCKS5 opzionale (`USE_SOCKS5_DNS=true`) per ridurre leak DNS e traffico incoerente
-- Limiti CPU/RAM/PIDs per ogni container
-- Check proxy pre-avvio e monitor online/offline continuo
-- Storico downtime proxy (offline now + total offline)
-- Auto-restart container con cooldown
-- Host Guard: rileva condizioni critiche host (CPU/RAM/Disk/Load) e applica escalation automatica:
-  - recycle stack (`--delete` + `--start`)
-  - restart Docker
-  - reboot host (se `AUTO_REBOOT_ON_CRITICAL=true`)
-- Metriche host (CPU, RAM, uptime) e usage container in dashboard
-- Salvataggio link EarnApp in `earnapp-links.txt`
-
-## Clonazione con wget
+## 0) Errore che hai ora (`requirements.txt` mancante)
+Se vedi:
 ```bash
-wget -O main.zip https://github.com/engageub/InternetIncome/archive/refs/heads/main.zip
-unzip -o main.zip
-cd InternetIncome-main
+ERROR: Could not open requirements file: No such file or directory: 'requirements.txt'
 ```
+sei quasi sicuramente nella repo sbagliata (zip di `engageub/InternetIncome` originale).
 
-## Quick start locale
-```bash
-sudo bash internetIncome.sh --install
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python app.py
-```
-Dashboard: `http://<ip-host>:8080`
+Devi usare la tua repo personalizzata:
+- `https://github.com/tecnollogia/internetincome-admin`
 
-## Setup totalmente automatico (chiede solo i proxy)
+## 1) Installazione consigliata (script unico smart)
+Su server Linux/Raspberry:
+
 ```bash
+cd /home/server/income-mio
+rm -rf internetincome-admin
+git clone https://github.com/tecnollogia/internetincome-admin.git
+cd internetincome-admin
 chmod +x auto_everything.sh
 ./auto_everything.sh
 ```
-Lo script:
-- chiede i proxy all'avvio (input multilinea fino a `END`)
-- normalizza i formati (`ip:port:user:pass` -> `socks5://...`)
+
+Lo script apre un menu intelligente:
+- `1` prima installazione completa
+- `2` aggiorna solo proxy + restart stack
+- `3` retune performance/scaling (senza restart)
+- `4` start stack
+- `5` stop stack
+- `6` status (container, servizio web, link)
+
+In modalità installazione:
 - installa Docker + Python + dipendenze
-- applica config ottimizzata e scalabile
-- avvia dashboard e stack EarnApp automaticamente
+- chiede i proxy all'inizio
+- normalizza `ip:port:user:pass` in `socks5://...`
+- applica tuning automatico in base a RAM/CPU (MAX_STACKS auto)
+- avvia dashboard web + stack EarnApp
 
-## Deploy automatico su Raspberry/Mini PC (wget + systemd)
-Nel progetto è incluso:
-- [setup_node.sh](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/deploy/setup_node.sh)
+## 2) Avvio manuale (se non vuoi script automatico)
 
-Dopo aver copiato questa cartella sul nodo remoto (es. `scp`/`rsync`), esegui:
+### 2.1 Clona repo corretta
 ```bash
-cd InternetIncome/deploy
-bash setup_node.sh "$HOME/internetincome" main
+git clone https://github.com/tecnollogia/internetincome-admin.git
+cd internetincome-admin
 ```
 
-Il setup:
-- installa Docker + Python
-- scarica il progetto con `wget`
-- crea virtualenv
-- installa dipendenze
-- registra `internetincome-web.service` (auto-restart on boot)
+### 2.2 Installa Docker
+```bash
+sudo apt-get update
+sudo apt-get -y install docker.io
+sudo systemctl enable --now docker
+```
 
-## Dashboard admin
-La web UI include:
-- configurazione completa `properties.conf`
-- editor proxy (`ip:port:user:pass` o URL con schema)
-- stato live container/proxy
-- test proxy on-demand
-- eventi auto-heal
-- azioni: Start / Stop / Delete Backup
+### 2.3 Installa dashboard
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-## Formato proxy
-Supportati:
+### 2.4 Inserisci proxy
+Modifica `proxies.txt` (uno per riga), esempio:
 ```text
-ip:port:user:pass
-http://user:pass@ip:port
-https://user:pass@ip:port
 socks5://user:pass@ip:port
 ```
 
-## File chiave
-- Orchestratore: [internetIncome.sh](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/internetIncome.sh)
-- Backend dashboard: [app.py](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/app.py)
-- Frontend: [index.html](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/templates/index.html), [app.js](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/static/app.js), [style.css](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/static/style.css)
-- Config: [properties.conf](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/properties.conf)
-- Proxy list: [proxies.txt](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/proxies.txt)
+### 2.5 Avvia stack
+```bash
+bash internetIncome.sh --start
+```
 
-## Comandi runtime
+### 2.6 Avvia dashboard
+```bash
+python app.py
+```
+Apri: `http://IP_SERVER:8080`
+
+## 3) Gestione
 ```bash
 bash internetIncome.sh --start
 bash internetIncome.sh --delete
 bash internetIncome.sh --deleteBackup
 ```
 
-## Note operative
-- `MAX_STACKS` vuoto => calcolo automatico in base a RAM/CPU
-- `START_DELAY_SEC` riduce i picchi di avvio
-- `DELAY_BETWEEN_TUN_AND_EARNAPP_SEC` rallenta l'innesco tra TUN e EarnApp per evitare burst
-- `USE_SOCKS5_DNS=true` abilita tunnel DNS su proxy socks5 tramite `ghcr.io/heiher/hev-socks5-tunnel`
-- `AUTO_HEAL=true` riavvia i container stopped automaticamente
-- `PROXY_CHECK_INTERVAL_SEC` controlla periodicamente i proxy
-- `ENABLE_HOST_GUARD=true` abilita la protezione host
-- `AUTO_REBOOT_ON_CRITICAL=true` abilita reboot automatico come ultima risorsa
+## 4) Dove trovi i link EarnApp
+File:
+- `earnapp-links.txt`
+
+Dashboard:
+- sezione `EarnApp Links`
+- sezione `EarnApp / Container / Proxy`
+
+## 5) Config importanti (`properties.conf`)
+- `USE_PROXIES=true`
+- `USE_SOCKS5_DNS=true` (consigliato con socks5)
+- `DELAY_BETWEEN_TUN_AND_EARNAPP_SEC='30'`
+- `START_DELAY_SEC='4'`
+- `AUTO_HEAL=true`
+- `ENABLE_HOST_GUARD=true`
+- `AUTO_REBOOT_ON_CRITICAL=true`
+
+## 6) Troubleshooting rapido
+
+### A) `requirements.txt` non trovato
+Sei nella cartella sbagliata. Verifica:
+```bash
+pwd
+ls
+```
+Devi vedere `app.py`, `requirements.txt`, `auto_everything.sh`.
+
+### B) Docker non parte
+```bash
+sudo systemctl status docker
+sudo systemctl restart docker
+```
+
+### C) Dashboard non apre
+```bash
+ss -lntp | grep 8080
+```
+Se chiusa, avvia:
+```bash
+source .venv/bin/activate
+python app.py
+```
+
+### D) Nessun nodo parte
+- controlla formato proxy
+- usa `socks5://...`
+- prova pochi proxy inizialmente (3-5)
+- leggi output `bash internetIncome.sh --start`
