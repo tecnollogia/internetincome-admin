@@ -39,6 +39,10 @@ In modalità installazione:
 - applica tuning automatico in base a RAM/CPU (MAX_STACKS auto)
 - avvia dashboard web + stack EarnApp
 
+Durante l'esecuzione lo script mostra:
+- step `START / IN CORSO / DONE` con secondi trascorsi
+- log completo persistente in `auto_everything.log`
+
 ## 2) Avvio manuale (se non vuoi script automatico)
 
 ### 2.1 Clona repo corretta

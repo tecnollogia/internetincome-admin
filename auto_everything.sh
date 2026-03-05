@@ -9,9 +9,13 @@ PROPERTIES_FILE="$BASE_DIR/properties.conf"
 PROXIES_FILE="$BASE_DIR/proxies.txt"
 VENV_DIR="$BASE_DIR/.venv"
 WEB_SERVICE="internetincome-web.service"
+LOG_FILE="$BASE_DIR/auto_everything.log"
+
+touch "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 log() {
-  printf '[auto] %s\n' "$*"
+  printf '[auto][%s] %s\n' "$(date '+%H:%M:%S')" "$*"
 }
 
 warn() {
@@ -19,8 +23,35 @@ warn() {
 }
 
 die() {
-  printf '[auto][error] %s\n' "$*" >&2
+  printf '[auto][%s][error] %s\n' "$(date '+%H:%M:%S')" "$*" >&2
   exit 1
+}
+
+run_step() {
+  local label="$1"
+  shift
+  local start now elapsed
+  start="$(date +%s)"
+  log "START: $label"
+
+  "$@" &
+  local pid=$!
+  while kill -0 "$pid" >/dev/null 2>&1; do
+    sleep 5
+    now="$(date +%s)"
+    elapsed=$((now - start))
+    log "IN CORSO: $label (${elapsed}s)"
+  done
+
+  wait "$pid"
+  local rc=$?
+  now="$(date +%s)"
+  elapsed=$((now - start))
+  if [ "$rc" -eq 0 ]; then
+    log "DONE: $label (${elapsed}s)"
+  else
+    die "FAIL: $label (rc=$rc, ${elapsed}s). Guarda log: $LOG_FILE"
+  fi
 }
 
 run_root() {
@@ -123,20 +154,39 @@ EOF
 
 install_system_deps() {
   log "installo dipendenze di sistema..."
-  run_root apt-get update
-  run_root apt-get -y install docker.io python3 python3-venv python3-pip curl jq
-  run_root systemctl enable --now docker || true
+  run_step "apt-get update" run_root apt-get update
+  run_step "apt-get install docker/python/jq" run_root apt-get -y install docker.io python3 python3-venv python3-pip curl jq
+  run_step "enable/start docker service" run_root systemctl enable --now docker
 }
 
 setup_python_env() {
   log "configuro ambiente python..."
+  command -v python3 >/dev/null 2>&1 || die "python3 non trovato"
+  python3 --version || true
+  command -v pip3 >/dev/null 2>&1 && pip3 --version || true
+
+  log "controllo rete verso PyPI..."
+  if ! curl -I -m 10 -s https://pypi.org/simple/ >/dev/null; then
+    warn "PyPI non raggiungibile ora. Possibili lentezze/timeout su pip."
+  else
+    log "PyPI raggiungibile."
+  fi
+
   if [ ! -d "$VENV_DIR" ]; then
-    python3 -m venv "$VENV_DIR"
+    run_step "creazione virtualenv" python3 -m venv "$VENV_DIR"
+  else
+    log "virtualenv gia esistente: $VENV_DIR"
   fi
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
-  pip install --upgrade pip >/dev/null
-  pip install -r requirements.txt >/dev/null
+  python --version || true
+  pip --version || true
+
+  [ -f "$BASE_DIR/requirements.txt" ] || die "requirements.txt non trovato in $BASE_DIR"
+  log "requirements rilevato, righe: $(wc -l < "$BASE_DIR/requirements.txt")"
+
+  run_step "upgrade pip" pip install --upgrade pip
+  run_step "install requirements" pip install -r requirements.txt --default-timeout 120
 }
 
 apply_smart_profile() {
@@ -235,6 +285,7 @@ show_result() {
   log "completato."
   [ -n "$ip" ] && log "dashboard: http://$ip:8080"
   [ -f "$BASE_DIR/earnapp-links.txt" ] && log "link in: $BASE_DIR/earnapp-links.txt"
+  log "log completo: $LOG_FILE"
 }
 
 first_install_flow() {
@@ -278,6 +329,7 @@ EOF
 
 main() {
   require_linux
+  log "log file: $LOG_FILE"
   [ -f "$BASE_DIR/internetIncome.sh" ] || die "internetIncome.sh non trovato nella cartella corrente"
   [ -f "$BASE_DIR/app.py" ] || die "app.py non trovato nella cartella corrente"
   [ -f "$BASE_DIR/requirements.txt" ] || die "requirements.txt non trovato nella cartella corrente"
@@ -299,4 +351,3 @@ main() {
 }
 
 main "$@"
-
