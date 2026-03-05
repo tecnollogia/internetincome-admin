@@ -27,6 +27,8 @@ die() {
   exit 1
 }
 
+trap 'printf "[auto][%s][error] comando fallito: %s (linea %s)\n" "$(date "+%H:%M:%S")" "$BASH_COMMAND" "$LINENO" >&2' ERR
+
 run_step() {
   local label="$1"
   shift
@@ -258,8 +260,9 @@ EOF
 
 start_stack() {
   log "avvio stack EarnApp..."
-  bash "$BASE_DIR/internetIncome.sh" --delete >/dev/null 2>&1 || true
-  bash "$BASE_DIR/internetIncome.sh" --start
+  run_step "delete stack precedente" bash "$BASE_DIR/internetIncome.sh" --delete || true
+  run_step "start stack earnapp" bash "$BASE_DIR/internetIncome.sh" --start
+  run_step "docker ps snapshot" docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
 }
 
 stop_stack() {
