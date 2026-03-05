@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EarnApp Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">InternetIncome</p>
+      <h1>EarnApp Admin Console</h1>
+    </div>
+    <div class="status-wrap">
+      <span id="busyBadge" class="badge">Idle</span>
+      <button id="refreshBtn" class="btn btn-ghost">Aggiorna</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card hero">
+      <h2>Operazioni</h2>
+      <p class="muted">Start/stop stack EarnApp, cleanup completo e verifica proxy live.</p>
+      <div class="actions">
+        <button id="startBtn" class="btn btn-primary">Start</button>
+        <button id="stopBtn" class="btn btn-warn">Stop</button>
+        <button id="cleanupBtn" class="btn btn-danger">Delete Backup</button>
+        <button id="checkProxiesBtn" class="btn btn-ghost">Check Proxies Now</button>
+      </div>
+      <div id="actionResult" class="console"></div>
+    </section>
+
+    <section class="card stats">
+      <h2>Stato Rapido</h2>
+      <div class="stats-grid">
+        <div class="stat"><span>Proxy online</span><strong id="onlineProxies">0</strong></div>
+        <div class="stat"><span>Proxy offline</span><strong id="offlineProxies">0</strong></div>
+        <div class="stat"><span>Container up</span><strong id="upCount">0</strong></div>
+        <div class="stat"><span>Container down</span><strong id="downCount">0</strong></div>
+      </div>
+      <div class="stats-grid secondary">
+        <div class="stat"><span>CPU host</span><strong id="hostCpu">0%</strong></div>
+        <div class="stat"><span>RAM host</span><strong id="hostMem">0%</strong></div>
+        <div class="stat"><span>Uptime host</span><strong id="hostUptime">-</strong></div>
+        <div class="stat"><span>Known</span><strong id="knownCount">0</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Configurazione</h2>
+      <div class="form-grid">
+        <label>Device Name <input id="DEVICE_NAME" type="text"></label>
+        <label>Use Proxies <select id="USE_PROXIES"><option value="true">true</option><option value="false">false</option></select></label>
+        <label>Enable Logs <select id="ENABLE_LOGS"><option value="false">false</option><option value="true">true</option></select></label>
+        <label>Auto Heal <select id="AUTO_HEAL"><option value="true">true</option><option value="false">false</option></select></label>
+        <label>Check Proxy Before Start <select id="CHECK_PROXY_BEFORE_START"><option value="true">true</option><option value="false">false</option></select></label>
+        <label>EarnApp Image <input id="EARNAPP_IMAGE" type="text"></label>
+        <label>Tun Image <input id="TUN_IMAGE" type="text"></label>
+        <label>Tun Log Level <input id="TUN_LOG_LEVEL" type="text"></label>
+        <label>EarnApp CPUs <input id="EARNAPP_CPUS" type="text"></label>
+        <label>EarnApp Memory <input id="EARNAPP_MEMORY" type="text"></label>
+        <label>Tun CPUs <input id="TUN_CPUS" type="text"></label>
+        <label>Tun Memory <input id="TUN_MEMORY" type="text"></label>
+        <label>Pids Limit <input id="PIDS_LIMIT" type="text"></label>
+        <label>Start Delay Sec <input id="START_DELAY_SEC" type="text"></label>
+        <label>Delay Tun->Earn Sec <input id="DELAY_BETWEEN_TUN_AND_EARNAPP_SEC" type="text"></label>
+        <label>Max Stacks <input id="MAX_STACKS" type="text"></label>
+        <label>Restart Cooldown Sec <input id="AUTO_RESTART_COOLDOWN_SEC" type="text"></label>
+        <label>Monitor Interval Sec <input id="MONITOR_INTERVAL_SEC" type="text"></label>
+        <label>Proxy Check Interval Sec <input id="PROXY_CHECK_INTERVAL_SEC" type="text"></label>
+        <label>EarnApp Platform <input id="EARNAPP_PLATFORM" type="text"></label>
+        <label>Tun Platform <input id="TUN_PLATFORM" type="text"></label>
+      </div>
+      <button id="saveConfigBtn" class="btn btn-primary">Salva Config</button>
+    </section>
+
+    <section class="card">
+      <h2>Proxies</h2>
+      <p class="muted">Formati accettati: `ip:port:user:pass` oppure `http(s)://user:pass@ip:port`.</p>
+      <textarea id="proxiesBox" rows="10" spellcheck="false"></textarea>
+      <button id="saveProxiesBtn" class="btn btn-primary">Salva Proxies</button>
+    </section>
+
+    <section class="card">
+      <h2>Proxy Health</h2>
+      <div id="proxyHealth" class="table-wrap"></div>
+    </section>
+
+    <section class="card">
+      <h2>Container Usage</h2>
+      <div id="usageTable" class="table-wrap"></div>
+    </section>
+
+    <section class="card">
+      <h2>EarnApp Links</h2>
+      <div id="linksList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Eventi / Auto-Heal</h2>
+      <div id="eventsList" class="list mono"></div>
+    </section>
+
+    <section class="card">
+      <h2>Ultimi Comandi</h2>
+      <div id="cmdList" class="list mono"></div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Runtime / local state
+__pycache__/
+*.pyc
+monitor-state.json
+proxy-health.log
+containernames.txt
+earnapp-links.txt
+earnapp.txt
+process.pid
+resolv.conf
+earnappdata/
+.venv/
+
+# Private local proxies (optional)
+proxies.private.txt

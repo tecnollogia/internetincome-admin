@@ -1,147 +1,88 @@
-# 💻 Internet Income 💸 Multi-Proxy . Multi-IP . Multi-VPN 🏰	
+﻿# InternetIncome EarnApp Admin Stack
 
-<img src="https://i.ibb.co/DKbwPN1/imgonline-com-ua-twotoone-2ck-Xl1-JPvw2t-D1.jpg" width="100%" height="300"/>
+Stack ottimizzato per Raspberry Pi e mini PC 4GB:
+- solo EarnApp
+- Docker + proxy
+- dashboard admin moderna
+- monitoraggio continuo + auto-healing
 
-This script lets you earn income by sharing your internet bandwidth. The income is passive and you don't have to do anything after the setup but keep getting payouts to your account.
-The main advantage of this script is the use of multiple proxies through docker containers. 
-This script has been tested on Linux amd64, armv7, arm64, and aarch64 platforms. 
-Your income depends on the number of proxies used and the proxy location. If you use all the apps mentioned, you can earn about $50 per month or more from 1 IP depending on the location of the proxy and demand.
-Please read the respective apps' legal terms or FAQ section if you have any queries on the type of traffic sent. 
-For advanced users, please use the [test](https://github.com/engageub/InternetIncome/tree/test) branch.
+## Funzioni principali
+- Start graduale degli stack (evita picchi su hardware debole)
+- Limiti CPU/RAM/PIDs per ogni container
+- Check proxy pre-avvio e monitor online/offline continuo
+- Storico downtime proxy (offline now + total offline)
+- Auto-restart container con cooldown
+- Metriche host (CPU, RAM, uptime) e usage container in dashboard
+- Salvataggio link EarnApp in `earnapp-links.txt`
 
-**Note**: Collecting and reading publicly available data from the internet is usually protected by free speech rights under the First Amendment of the US Constitution.
-
-### **Special Offer** on [Ashburn Proxies](https://ashburnproxies.com/?via=internetincome)
-
-- Use code **RESI2025** to get 50% off on Residential Plans.
-- Use code **ASHBURN2025** to get 50% on ISP Plans.
-
-### <ins> [Click here to get Static Residential Proxies starting at $1](https://github.com/engageub/InternetIncome/wiki/Proxies-and-Hosting-Providers)</ins> 
-
-File Internet Crime Complaints World Wide here: https://www.ic3.gov/
-
-## 💰	Register with the following links:
-### <ins>[Click here to Sign Up now](https://github.com/engageub/InternetIncome/wiki/Registration-Links)</ins> 
-## :judge: Comparison of different apps based on proxy type 
-
-| App Name | Residential/Home ISP | Datacenter/Hosting/VPS |Limit per Account|Devices per IP| Payment|
-|  :--- |  :---: |  :---: | :---: | :---: | :---: |
-| [EarnApp](https://t.co/k0w7jqLfxq)  | :heavy_check_mark:	  | :x: | 10|1| Paypal, Gift Card |
-| [PacketStream](https://t.co/FtklOxS7QN)  | :heavy_check_mark:	  | :x: |No limit|1| Paypal |
-| [Honeygain](https://t.co/Xo1FwoUJx1) | :heavy_check_mark:	  | :x: |10|1| Crypto, Paypal |
-| [IPRoyal](https://t.co/7hZUclQbCd)  | :heavy_check_mark:	  | :x: |No limit|1|Crypto, Paypal|
-| [Ebesucher](https://www.ebesucher.com/?ref=engageub)  | :heavy_check_mark:	  | :x: |No limit|1| Paypal|
-| [Grass](https://t.co/hpl30lW4cP) | :heavy_check_mark:	  | :x: |No limit|1| Crypto |
-| [Wipter](https://wipter.com/register?via=CE5979A505) | :heavy_check_mark:	  | :x: |No limit|1| Crypto |
-| [Uprock](https://t.co/xwUf7kY9U0) | :heavy_check_mark:	  | :x: |No limit|1| Crypto |
-| [Gradient Network](https://app.gradient.network/signup?code=OKM7KM) | :heavy_check_mark: | :x: |No limit|1| Rewards|
-| [PassiveApp](https://passiveapp.com/i/KWc0pl)  | :heavy_check_mark: | :x: |No limit|1| Crypto, Paypal|
-| [Bytebenefit](https://bytebenefit.io/invited?ref=nD8Rtx) | :heavy_check_mark: | :x: |No limit|1| Paypal, Stripe|
-| [AntGain](https://t.co/0phceMTJhF)  | :heavy_check_mark:	  | :heavy_check_mark: | No limit|1| Crypto |
-| [WizardGain](https://t.co/NBMM8abxi0) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Paypal, Crypto|
-| [URnetwork](https://ur.io/c?bonus=YSC0T7) (Use refer code `YSC0T7` in settings for bonus) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto |
-| [Titan Network](https://test1.titannet.io/intiveRegister?code=ILOgrq) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Rewards |
-| [Adnade](https://t.co/KthcbzPa08)  | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1|Crypto, Paypal| 
-| [EarnFM](https://t.co/SX6ggtooDW)  | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto, Paypal, Giftcard|
-| [Peer2Profit](https://t.me/peer2profit_app_bot?start=163956712261b9cf129932a)  | :heavy_check_mark:	  | :heavy_check_mark:	 | No limit|No limit| Crypto|
-| [ProxyBase](https://peer.proxybase.org/?referral=t5QAXPQ8Q8)  | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto|
-| [ProxyRack](https://peer.proxyrack.com/ref/tqkgvytmszxtxafo30miq2dbeeauuopmmup0eklx)  | :heavy_check_mark:	  | :heavy_check_mark: |500|1| Paypal|
-| [Repocket](https://link.repocket.co/pV1G)  | :heavy_check_mark:	  | :heavy_check_mark: |No limit|2| Paypal, Wise, Crypto|
-| [Traffmonetizer](https://traffmonetizer.com/?aff=4211) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|No limit| Crypto|
-| [ProxyLite](https://proxylite.ru/?r=AXLDPNX5) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto|
-| [BitPing](https://app.bitping.com/?r=drPpp600) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto|
-| [Mysterium](https://mystnodes.co/?referral_code=xejcELAJ368e6PYnB30VHAnNKn30Aa6wKygVZdam) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto|
-| [Bytelixir](https://t.co/MNaVYiALR5) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto |
-| [Salad](https://salad.com/) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Paypal |
-| [GagaNode](https://t.co/UO6hnDCv4M) | :heavy_check_mark:	  | :heavy_check_mark: |No limit|1| Crypto |
-
-* [Click here](https://prnt.sc/siTVsNW9QDrL) to view the screenshot above as some browsers don't support checkmarks. 
-* No Limit indicates that the website has not mentioned any specifics and multiple proxies were working. Try to use 1 device per IP.
-* To convert crypto to other wallets or currencies, you may use [BestChange](https://www.bestchange.com/?p=1252652).
-* The comparison mentioned above was updated on 25-04-2024 and may be subject to change later.
-
-### <ins>[Click here to view Browser Extension Based Apps](https://github.com/engageub/InternetIncome/wiki/Browser-Extension-Based-Apps)</ins> 
-
-
-
-## :house_with_garden:	Prerequisites 	
-You can just run the following commands to install or update docker.
-
-[Click here to get up to 4 always free instances](https://developer.oracle.com/free.html)
-
-![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
-### Install docker on Linux
-```
-sudo apt-get update
-sudo apt-get -y install docker.io
-```
-If you use Arm or Aarch Linux OS, you must install [binfmt](https://hub.docker.com/r/tonistiigi/binfmt) emulator to support amd64 images on your PC.
-### For ARM or AARCH Architectures
-```
-sudo docker run --privileged --rm tonistiigi/binfmt --install all
-sudo apt-get install qemu binfmt-support qemu-user-static
-```
-
-![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
-### Install Docker on Windows
-Follow this [tutorial](https://www.youtube.com/watch?v=2ezNqqaSjq8) till 7.30 minutes where docker runs on Ubuntu and then follow the next steps below to download the code.
-  
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)  
-### Want to try Docker for free without installation?
-If you like to use Docker directly for free, you can use [iximiuz](https://labs.iximiuz.com/playgrounds/docker). It resets every 1 hour. Please use the [tunproxy](https://github.com/engageub/InternetIncome/tree/tunproxy) branch to test it using proxies.
-## 👇	Next steps❓	
-Download the code and edit the configuration file properties.conf with your account details.  
-If you don't have GUI access but have terminal access, you can use the following commands to download the code.
-### Download the code
-```
+## Clonazione con wget
+```bash
 wget -O main.zip https://github.com/engageub/InternetIncome/archive/refs/heads/main.zip
-sudo apt-get install unzip
 unzip -o main.zip
 cd InternetIncome-main
 ```
-* Please edit the "properties.conf" file using the following instructions and save the changes.  
-* If you are using proxies, please set the `USE_PROXIES` value to `true`.
-* Please refer to [How to add proxies](https://github.com/engageub/InternetIncome/wiki/Frequently-Asked-Questions#how-to-use-residential-proxies) for configuring various types of proxies.
-* When setting your email, password, or token, always place them between single quotes ('') to consider special characters. 
-* If you do not wish to use a particular application, leave the default value as it is, and the script will not run for that application.
-### Update configuration and save
+
+## Quick start locale
+```bash
+sudo bash internetIncome.sh --install
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py
 ```
-vi properties.conf
-```
-## :runner: Run the script
-After you have followed all the mentioned above steps just run the following command to start and check your income flow to you :money_mouth_face:	.
-### Start the process
-```
-sudo bash internetIncome.sh --start
-```
-## :stop_sign: Stop and Delete containers
-To stop and delete all the containers started with the script. Run the following command.  Note that for Earnapp, Proxyrack, Traffmonetizer, and mysterium the data is not deleted and the same IDs will be used on delete and start since it is required to do a manual setup each time you start. Delete them or use a different folder to download the script if you want to change the node IDs.
-### Stop and delete containers
-Note that the backup of device IDs and node IDs are present in the same folder of the script. 
-```
-sudo bash internetIncome.sh --delete
-```
-### Delete backup files and folders
-To delete the backup files and folders created by the script, use the following command.
-```
-sudo bash internetIncome.sh --deleteBackup
+Dashboard: `http://<ip-host>:8080`
+
+## Deploy automatico su Raspberry/Mini PC (wget + systemd)
+Nel progetto è incluso:
+- [setup_node.sh](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/deploy/setup_node.sh)
+
+Dopo aver copiato questa cartella sul nodo remoto (es. `scp`/`rsync`), esegui:
+```bash
+cd InternetIncome/deploy
+bash setup_node.sh "$HOME/internetincome" main
 ```
 
-## :department_store:	Proxies or Hosting Providers
-[Click here to get proxies or hosting providers with free credits.](https://github.com/engageub/InternetIncome/wiki/Proxies-and-Hosting-Providers)
+Il setup:
+- installa Docker + Python
+- scarica il progetto con `wget`
+- crea virtualenv
+- installa dipendenze
+- registra `internetincome-web.service` (auto-restart on boot)
 
-**<ins>Note:</ins>** [Bytelixir](https://t.co/MNaVYiALR5), [PassiveApp](https://passiveapp.com/i/KWc0pl) and [Peer2Profit](https://t.me/peer2profit_app_bot?start=163956712261b9cf129932a)  support proxies in dashboard. You can add your proxies directly in website dashboard instead of running applications. 
+## Dashboard admin
+La web UI include:
+- configurazione completa `properties.conf`
+- editor proxy (`ip:port:user:pass` o URL con schema)
+- stato live container/proxy
+- test proxy on-demand
+- eventi auto-heal
+- azioni: Start / Stop / Delete Backup
 
+## Formato proxy
+Supportati:
+```text
+ip:port:user:pass
+http://user:pass@ip:port
+https://user:pass@ip:port
+socks5://user:pass@ip:port
+```
 
-## :grey_question: FAQ
-### <ins>[Click here to view Frequently Asked Questions](https://github.com/engageub/InternetIncome/wiki/Frequently-Asked-Questions)</ins> 
+## File chiave
+- Orchestratore: [internetIncome.sh](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/internetIncome.sh)
+- Backend dashboard: [app.py](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/app.py)
+- Frontend: [index.html](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/templates/index.html), [app.js](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/static/app.js), [style.css](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/static/style.css)
+- Config: [properties.conf](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/properties.conf)
+- Proxy list: [proxies.txt](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/proxies.txt)
 
-## 📇 License:
-* This product is available for free and may be freely copied and distributed in its original form. 
-* However, it is prohibited to distribute modified copies of the product. 
-* Personal modifications are allowed for personal use only.
+## Comandi runtime
+```bash
+bash internetIncome.sh --start
+bash internetIncome.sh --delete
+bash internetIncome.sh --deleteBackup
+```
 
-## :warning: Disclaimer
-This script is provided "as is" and without warranty of any kind.  
-The author makes no warranties, express or implied, that this script is free of errors, defects, or suitable for any particular purpose.  
-The author shall not  be liable for any damages suffered by any user of this script, whether direct, indirect, incidental, consequential, or special, arising from the use of or inability to use this script or its documentation, even if the author has been advised of the possibility of such damages.  
+## Note operative
+- `MAX_STACKS` vuoto => calcolo automatico in base a RAM/CPU
+- `START_DELAY_SEC` riduce i picchi di avvio
+- `AUTO_HEAL=true` riavvia i container stopped automaticamente
+- `PROXY_CHECK_INTERVAL_SEC` controlla periodicamente i proxy
