@@ -38,6 +38,18 @@ python app.py
 ```
 Dashboard: `http://<ip-host>:8080`
 
+## Setup totalmente automatico (chiede solo i proxy)
+```bash
+chmod +x auto_everything.sh
+./auto_everything.sh
+```
+Lo script:
+- chiede i proxy all'avvio (input multilinea fino a `END`)
+- normalizza i formati (`ip:port:user:pass` -> `socks5://...`)
+- installa Docker + Python + dipendenze
+- applica config ottimizzata e scalabile
+- avvia dashboard e stack EarnApp automaticamente
+
 ## Deploy automatico su Raspberry/Mini PC (wget + systemd)
 Nel progetto è incluso:
 - [setup_node.sh](/c:/Users/khan.dip.2008.IAV/Desktop/Progetto%20mio/InternetIncome/deploy/setup_node.sh)
