@@ -45,8 +45,10 @@ run_step() {
     log "IN CORSO: $label (${elapsed}s)"
   done
 
-  wait "$pid"
-  local rc=$?
+  local rc=0
+  if ! wait "$pid"; then
+    rc=$?
+  fi
   now="$(date +%s)"
   elapsed=$((now - start))
   if [ "$rc" -eq 0 ]; then
@@ -80,8 +82,10 @@ try_step_with_timeout() {
     log "IN CORSO: $label (${elapsed}s)"
   done
 
-  wait "$pid"
-  local rc=$?
+  local rc=0
+  if ! wait "$pid"; then
+    rc=$?
+  fi
   now="$(date +%s)"
   elapsed=$((now - start))
   if [ "$rc" -eq 0 ]; then
