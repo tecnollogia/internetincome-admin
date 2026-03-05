@@ -350,7 +350,9 @@ start_stack() {
   fi
 
   local max_stacks
-  if [ -n "$MAX_STACKS" ]; then
+  if [ "${MAX_STACKS:-}" = "all" ]; then
+    max_stacks=999999
+  elif [ -n "$MAX_STACKS" ]; then
     max_stacks="$MAX_STACKS"
   else
     max_stacks="$(compute_auto_max_stacks)"

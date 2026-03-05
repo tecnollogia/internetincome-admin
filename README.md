@@ -105,6 +105,10 @@ Dashboard:
 - `AUTO_HEAL=true`
 - `ENABLE_HOST_GUARD=true`
 - `AUTO_REBOOT_ON_CRITICAL=true`
+- `MAX_STACKS='all'` = usa tutti i proxy disponibili
+
+Nota:
+- 1 stack = 1 proxy + 1 container `tun` + 1 container `earnapp`
 
 ## 6) Troubleshooting rapido
 

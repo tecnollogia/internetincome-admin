@@ -192,9 +192,6 @@ setup_python_env() {
 }
 
 apply_smart_profile() {
-  local cap
-  cap="$(get_default_stack_cap)"
-
   log "applico profilo smart (scalabile e low-disturbance)..."
   set_prop "USE_PROXIES" "true"
   set_prop "USE_SOCKS5_DNS" "true"
@@ -205,7 +202,7 @@ apply_smart_profile() {
   set_prop "AUTO_REBOOT_ON_CRITICAL" "true"
   set_prop "DELAY_BETWEEN_TUN_AND_EARNAPP_SEC" "'30'"
   set_prop "START_DELAY_SEC" "'4'"
-  set_prop "MAX_STACKS" "'$cap'"
+  set_prop "MAX_STACKS" "'all'"
   set_prop "EARNAPP_CPUS" "'0.35'"
   set_prop "TUN_CPUS" "'0.20'"
   set_prop "EARNAPP_MEMORY" "'192m'"
@@ -216,16 +213,21 @@ apply_smart_profile() {
 ask_scaling_override() {
   local cap answer
   cap="$(get_default_stack_cap)"
-  printf 'Cap auto suggerito per questa macchina: %s stack. Vuoi cambiarlo? [invio=no]: ' "$cap"
+  printf "Modalita attuale: tutti i proxy (MAX_STACKS='all').\n"
+  printf 'Suggerimento prudente per questa macchina: %s stack.\n' "$cap"
+  printf "Inserisci un limite numerico (oppure invio per usare TUTTI i proxy): "
   read -r answer || true
   if [ -n "${answer:-}" ]; then
     if [[ "$answer" =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ]; then
       set_prop "MAX_STACKS" "'$answer'"
       log "MAX_STACKS impostato a $answer"
     else
-      warn "valore non valido, mantengo cap automatico"
-      set_prop "MAX_STACKS" "'$cap'"
+      warn "valore non valido, mantengo MAX_STACKS='all'"
+      set_prop "MAX_STACKS" "'all'"
     fi
+  else
+    set_prop "MAX_STACKS" "'all'"
+    log "MAX_STACKS impostato a 'all' (tutti i proxy)"
   fi
 }
 
