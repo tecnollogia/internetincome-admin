@@ -56,6 +56,42 @@ run_step() {
   fi
 }
 
+run_step_with_timeout() {
+  local label="$1"
+  local timeout_sec="$2"
+  shift 2
+  run_step "$label (timeout ${timeout_sec}s)" timeout --foreground "$timeout_sec" "$@"
+}
+
+try_step_with_timeout() {
+  local label="$1"
+  local timeout_sec="$2"
+  shift 2
+  local start now elapsed
+  start="$(date +%s)"
+  log "START: $label (timeout ${timeout_sec}s)"
+
+  timeout --foreground "$timeout_sec" "$@" &
+  local pid=$!
+  while kill -0 "$pid" >/dev/null 2>&1; do
+    sleep 5
+    now="$(date +%s)"
+    elapsed=$((now - start))
+    log "IN CORSO: $label (${elapsed}s)"
+  done
+
+  wait "$pid"
+  local rc=$?
+  now="$(date +%s)"
+  elapsed=$((now - start))
+  if [ "$rc" -eq 0 ]; then
+    log "DONE: $label (${elapsed}s)"
+  else
+    warn "FAIL: $label (rc=$rc, ${elapsed}s)"
+  fi
+  return "$rc"
+}
+
 run_root() {
   if [ "${EUID:-$(id -u)}" -eq 0 ]; then
     "$@"
@@ -187,8 +223,17 @@ setup_python_env() {
   [ -f "$BASE_DIR/requirements.txt" ] || die "requirements.txt non trovato in $BASE_DIR"
   log "requirements rilevato, righe: $(wc -l < "$BASE_DIR/requirements.txt")"
 
-  run_step "upgrade pip" pip install --upgrade pip
-  run_step "install requirements" pip install -r requirements.txt --default-timeout 120
+  export PIP_DISABLE_PIP_VERSION_CHECK=1
+  export PIP_PROGRESS_BAR=off
+
+  # pip update can hang on slow mirrors, so keep a hard timeout.
+  try_step_with_timeout "upgrade pip" 180 pip install --upgrade pip --retries 2 --timeout 30 || true
+
+  # requirements install with retry/fallback and hard timeout to avoid endless stalls.
+  if ! try_step_with_timeout "install requirements (attempt 1)" 300 pip install -r requirements.txt --retries 2 --timeout 30 -v; then
+    warn "tentativo 1 fallito/timeout, riprovo con --no-cache-dir"
+    run_step_with_timeout "install requirements (attempt 2)" 300 pip install -r requirements.txt --retries 2 --timeout 30 --no-cache-dir -v
+  fi
 }
 
 apply_smart_profile() {
