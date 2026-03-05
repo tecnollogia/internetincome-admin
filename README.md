@@ -9,6 +9,7 @@ Stack ottimizzato per Raspberry Pi e mini PC 4GB:
 
 ## Funzioni principali
 - Start graduale degli stack (evita picchi su hardware debole)
+- Routing DNS via SOCKS5 opzionale (`USE_SOCKS5_DNS=true`) per ridurre leak DNS e traffico incoerente
 - Limiti CPU/RAM/PIDs per ogni container
 - Check proxy pre-avvio e monitor online/offline continuo
 - Storico downtime proxy (offline now + total offline)
@@ -89,6 +90,8 @@ bash internetIncome.sh --deleteBackup
 ## Note operative
 - `MAX_STACKS` vuoto => calcolo automatico in base a RAM/CPU
 - `START_DELAY_SEC` riduce i picchi di avvio
+- `DELAY_BETWEEN_TUN_AND_EARNAPP_SEC` rallenta l'innesco tra TUN e EarnApp per evitare burst
+- `USE_SOCKS5_DNS=true` abilita tunnel DNS su proxy socks5 tramite `ghcr.io/heiher/hev-socks5-tunnel`
 - `AUTO_HEAL=true` riavvia i container stopped automaticamente
 - `PROXY_CHECK_INTERVAL_SEC` controlla periodicamente i proxy
 - `ENABLE_HOST_GUARD=true` abilita la protezione host

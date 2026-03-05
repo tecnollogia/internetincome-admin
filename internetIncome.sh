@@ -21,6 +21,7 @@ PROXY_HEALTH_FILE="proxy-health.log"
 
 EARNAPP_IMAGE_DEFAULT="fazalfarhan01/earnapp:lite"
 TUN_IMAGE_DEFAULT="xjasonlyu/tun2socks:v2.6.0"
+SOCKS5_DNS_IMAGE_DEFAULT="ghcr.io/heiher/hev-socks5-tunnel:latest"
 
 run_docker() {
   if docker info >/dev/null 2>&1; then
@@ -96,8 +97,10 @@ load_properties() {
 
   EARNAPP_IMAGE="${EARNAPP_IMAGE:-$EARNAPP_IMAGE_DEFAULT}"
   TUN_IMAGE="${TUN_IMAGE:-$TUN_IMAGE_DEFAULT}"
+  SOCKS5_DNS_IMAGE="${SOCKS5_DNS_IMAGE:-$SOCKS5_DNS_IMAGE_DEFAULT}"
   DEVICE_NAME="${DEVICE_NAME:-linux-node}"
   USE_PROXIES="${USE_PROXIES:-false}"
+  USE_SOCKS5_DNS="${USE_SOCKS5_DNS:-true}"
   ENABLE_LOGS="${ENABLE_LOGS:-false}"
   EARNAPP="${EARNAPP:-true}"
   START_DELAY_SEC="${START_DELAY_SEC:-3}"
@@ -213,21 +216,58 @@ start_tun_container() {
   [ -n "${TUN_PLATFORM:-}" ] && tun_resources+=(--platform "$TUN_PLATFORM")
 
   for attempt in 1 2 3; do
-    if run_docker run -d \
-      --name "$tun_name" \
-      --restart=always \
-      --mount type=bind,source=/dev/net/tun,target=/dev/net/tun \
-      --mount type=bind,source="$SCRIPT_DIR/$DNS_FILE",target=/etc/resolv.conf,readonly \
-      --cap-add=NET_ADMIN \
-      -e PROXY="$proxy" \
-      -e EXTRA_COMMANDS='ip rule add iif lo ipproto udp dport 53 lookup main;' \
-      -e LOGLEVEL="${TUN_LOG_LEVEL:-warn}" \
-      $log_args \
-      "${tun_resources[@]}" \
-      "$TUN_IMAGE" >/dev/null; then
-      record_container "$tun_name"
-      printf "%s" "$tun_name"
-      return 0
+    if [ "$USE_SOCKS5_DNS" = "true" ] && [[ "$proxy" == socks5://* ]]; then
+      local socks_no_scheme socks_addr socks_port socks_user socks_pass socks_hostport socks_creds
+      socks_no_scheme="${proxy#socks5://}"
+      if [[ "$socks_no_scheme" == *@* ]]; then
+        socks_creds="${socks_no_scheme%@*}"
+        socks_hostport="${socks_no_scheme#*@}"
+        socks_user="${socks_creds%%:*}"
+        socks_pass="${socks_creds#*:}"
+      else
+        socks_hostport="$socks_no_scheme"
+        socks_user=""
+        socks_pass=""
+      fi
+      socks_addr="${socks_hostport%%:*}"
+      socks_port="${socks_hostport##*:}"
+
+      if run_docker run -d \
+        --name "$tun_name" \
+        --restart=always \
+        --mount type=bind,source=/dev/net/tun,target=/dev/net/tun \
+        --mount type=bind,source="$SCRIPT_DIR/$DNS_FILE",target=/etc/resolv.conf,readonly \
+        --cap-add=NET_ADMIN \
+        -e LOG_LEVEL="${TUN_LOG_LEVEL:-warn}" \
+        -e SOCKS5_ADDR="$socks_addr" \
+        -e SOCKS5_PORT="$socks_port" \
+        -e SOCKS5_USERNAME="$socks_user" \
+        -e SOCKS5_PASSWORD="$socks_pass" \
+        $log_args \
+        "${tun_resources[@]}" \
+        --no-healthcheck \
+        "$SOCKS5_DNS_IMAGE" >/dev/null; then
+        record_container "$tun_name"
+        printf "%s" "$tun_name"
+        return 0
+      fi
+    else
+      if run_docker run -d \
+        --name "$tun_name" \
+        --restart=always \
+        --mount type=bind,source=/dev/net/tun,target=/dev/net/tun \
+        --mount type=bind,source="$SCRIPT_DIR/$DNS_FILE",target=/etc/resolv.conf,readonly \
+        --cap-add=NET_ADMIN \
+        -e PROXY="$proxy" \
+        -e EXTRA_COMMANDS='ip rule add iif lo ipproto udp dport 53 lookup main;' \
+        -e LOGLEVEL="${TUN_LOG_LEVEL:-warn}" \
+        $log_args \
+        "${tun_resources[@]}" \
+        "$TUN_IMAGE" >/dev/null; then
+        record_container "$tun_name"
+        printf "%s" "$tun_name"
+        return 0
+      fi
     fi
     sleep $((attempt * 2))
   done
@@ -304,6 +344,9 @@ start_stack() {
   if [ "$USE_PROXIES" = "true" ]; then
     require_file "$PROXIES_FILE"
     run_docker pull "$TUN_IMAGE" >/dev/null
+    if [ "$USE_SOCKS5_DNS" = "true" ]; then
+      run_docker pull "$SOCKS5_DNS_IMAGE" >/dev/null
+    fi
   fi
 
   local max_stacks
