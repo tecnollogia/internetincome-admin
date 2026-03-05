@@ -47,6 +47,14 @@ CONFIG_KEYS = [
     "DELAY_BETWEEN_TUN_AND_EARNAPP_SEC",
     "START_DELAY_SEC",
     "MAX_STACKS",
+    "ENABLE_HOST_GUARD",
+    "AUTO_REBOOT_ON_CRITICAL",
+    "HOST_ACTION_COOLDOWN_SEC",
+    "CPU_CRITICAL_PERCENT",
+    "MEM_CRITICAL_PERCENT",
+    "DISK_CRITICAL_PERCENT",
+    "LOAD_CRITICAL_PER_CPU",
+    "CRITICAL_STREAK_THRESHOLD",
 ]
 
 BOOL_KEYS = {
@@ -55,6 +63,8 @@ BOOL_KEYS = {
     "ENABLE_LOGS",
     "AUTO_HEAL",
     "CHECK_PROXY_BEFORE_START",
+    "ENABLE_HOST_GUARD",
+    "AUTO_REBOOT_ON_CRITICAL",
 }
 
 DEFAULT_CONFIG = {
@@ -80,6 +90,14 @@ DEFAULT_CONFIG = {
     "DELAY_BETWEEN_TUN_AND_EARNAPP_SEC": "5",
     "START_DELAY_SEC": "4",
     "MAX_STACKS": "",
+    "ENABLE_HOST_GUARD": True,
+    "AUTO_REBOOT_ON_CRITICAL": False,
+    "HOST_ACTION_COOLDOWN_SEC": "600",
+    "CPU_CRITICAL_PERCENT": "95",
+    "MEM_CRITICAL_PERCENT": "95",
+    "DISK_CRITICAL_PERCENT": "95",
+    "LOAD_CRITICAL_PER_CPU": "1.6",
+    "CRITICAL_STREAK_THRESHOLD": "3",
 }
 
 app = Flask(__name__)
@@ -212,6 +230,14 @@ def write_properties(data: dict[str, Any]) -> None:
             f"DELAY_BETWEEN_TUN_AND_EARNAPP_SEC='{shell_escape_single(cleaned['DELAY_BETWEEN_TUN_AND_EARNAPP_SEC'])}'",
             f"START_DELAY_SEC='{shell_escape_single(cleaned['START_DELAY_SEC'])}'",
             f"MAX_STACKS='{shell_escape_single(cleaned['MAX_STACKS'])}'",
+            f"ENABLE_HOST_GUARD={'true' if cleaned['ENABLE_HOST_GUARD'] else 'false'}",
+            f"AUTO_REBOOT_ON_CRITICAL={'true' if cleaned['AUTO_REBOOT_ON_CRITICAL'] else 'false'}",
+            f"HOST_ACTION_COOLDOWN_SEC='{shell_escape_single(cleaned['HOST_ACTION_COOLDOWN_SEC'])}'",
+            f"CPU_CRITICAL_PERCENT='{shell_escape_single(cleaned['CPU_CRITICAL_PERCENT'])}'",
+            f"MEM_CRITICAL_PERCENT='{shell_escape_single(cleaned['MEM_CRITICAL_PERCENT'])}'",
+            f"DISK_CRITICAL_PERCENT='{shell_escape_single(cleaned['DISK_CRITICAL_PERCENT'])}'",
+            f"LOAD_CRITICAL_PER_CPU='{shell_escape_single(cleaned['LOAD_CRITICAL_PER_CPU'])}'",
+            f"CRITICAL_STREAK_THRESHOLD='{shell_escape_single(cleaned['CRITICAL_STREAK_THRESHOLD'])}'",
             "",
             "######################### End Configuration ##################################",
             "",
@@ -314,7 +340,32 @@ def get_host_metrics() -> dict[str, Any]:
     if rc == 0:
         uptime = out.strip()
 
-    return {"cpu_percent": round(cpu, 2), "mem_percent": round(mem_pct, 2), "uptime": uptime}
+    disk_pct = 0.0
+    rc, out, _ = run_cmd(["sh", "-c", "df -P / | awk 'NR==2 {gsub(\"%\",\"\",$5); print $5}'"], timeout=4)
+    if rc == 0 and out.strip():
+        try:
+            disk_pct = float(out.strip())
+        except ValueError:
+            disk_pct = 0.0
+
+    load1 = 0.0
+    rc, out, _ = run_cmd(["sh", "-c", "cat /proc/loadavg | awk '{print $1}'"], timeout=4)
+    if rc == 0 and out.strip():
+        try:
+            load1 = float(out.strip())
+        except ValueError:
+            load1 = 0.0
+
+    cpu_count = os.cpu_count() or 1
+
+    return {
+        "cpu_percent": round(cpu, 2),
+        "mem_percent": round(mem_pct, 2),
+        "disk_percent": round(disk_pct, 2),
+        "load1": round(load1, 2),
+        "cpu_count": cpu_count,
+        "uptime": uptime,
+    }
 
 
 def get_container_usage(names: list[str]) -> list[dict[str, Any]]:
@@ -456,6 +507,10 @@ class MonitorService:
         }
         self.proxy_runtime: dict[str, ProxyRuntime] = {}
         self.last_restart: dict[str, float] = {}
+        self.last_guard_actions: dict[str, float] = {}
+        self.guard_level = 0
+        self.critical_streak = 0
+        self.last_critical_reasons: list[str] = []
         self.last_proxy_check = 0.0
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.run_loop, daemon=True)
@@ -505,6 +560,103 @@ class MonitorService:
             events = self.state.setdefault("events", [])
             events.insert(0, f"{now_iso()} | {msg}")
             self.state["events"] = events[:100]
+
+    def _to_int(self, value: Any, default: int) -> int:
+        try:
+            return int(str(value))
+        except Exception:
+            return default
+
+    def _to_float(self, value: Any, default: float) -> float:
+        try:
+            return float(str(value))
+        except Exception:
+            return default
+
+    def evaluate_host_critical(self, cfg: dict[str, Any], host: dict[str, Any]) -> tuple[bool, list[str]]:
+        reasons: list[str] = []
+        cpu_limit = self._to_float(cfg.get("CPU_CRITICAL_PERCENT", "95"), 95.0)
+        mem_limit = self._to_float(cfg.get("MEM_CRITICAL_PERCENT", "95"), 95.0)
+        disk_limit = self._to_float(cfg.get("DISK_CRITICAL_PERCENT", "95"), 95.0)
+        load_per_cpu = self._to_float(cfg.get("LOAD_CRITICAL_PER_CPU", "1.6"), 1.6)
+
+        cpu = float(host.get("cpu_percent", 0.0) or 0.0)
+        mem = float(host.get("mem_percent", 0.0) or 0.0)
+        disk = float(host.get("disk_percent", 0.0) or 0.0)
+        load1 = float(host.get("load1", 0.0) or 0.0)
+        cpu_count = int(host.get("cpu_count", 1) or 1)
+        load_limit = max(0.5, load_per_cpu * max(1, cpu_count))
+
+        if cpu >= cpu_limit:
+            reasons.append(f"cpu={cpu:.1f}%>={cpu_limit:.1f}%")
+        if mem >= mem_limit:
+            reasons.append(f"mem={mem:.1f}%>={mem_limit:.1f}%")
+        if disk >= disk_limit:
+            reasons.append(f"disk={disk:.1f}%>={disk_limit:.1f}%")
+        if load1 >= load_limit:
+            reasons.append(f"load1={load1:.2f}>={load_limit:.2f}")
+
+        return (len(reasons) > 0), reasons
+
+    def _run_host_action(self, action: str, cmd: list[str], timeout: int = 900) -> bool:
+        rc, out, err = run_cmd(cmd, timeout=timeout)
+        ok = rc == 0
+        details = out.strip() if ok else err.strip()
+        self.event(f"host-guard {action} {'ok' if ok else 'fail'} | {details or 'no output'}")
+        if ok:
+            self.last_guard_actions[action] = time.time()
+        return ok
+
+    def _can_run_action(self, action: str, cooldown: int) -> bool:
+        now = time.time()
+        last = self.last_guard_actions.get(action, 0.0)
+        return (now - last) >= cooldown
+
+    def host_guard_escalation(self, cfg: dict[str, Any], critical: bool) -> None:
+        if not cfg.get("ENABLE_HOST_GUARD", True):
+            self.guard_level = 0
+            return
+
+        if not critical:
+            self.guard_level = 0
+            return
+
+        streak_threshold = self._to_int(cfg.get("CRITICAL_STREAK_THRESHOLD", "3"), 3)
+        cooldown = self._to_int(cfg.get("HOST_ACTION_COOLDOWN_SEC", "600"), 600)
+        auto_reboot = bool(cfg.get("AUTO_REBOOT_ON_CRITICAL", False))
+
+        if self.critical_streak < max(1, streak_threshold):
+            return
+
+        # Level 1: recycle stack (delete + start) if no user command is currently running.
+        if self.guard_level <= 0 and self._can_run_action("stack_recycle", cooldown):
+            if command_lock.locked():
+                self.event("host-guard skip stack_recycle: ui command lock is active")
+            else:
+                ok_delete = self._run_host_action("stack_delete", ["bash", str(SCRIPT_PATH), "--delete"], timeout=900)
+                time.sleep(3)
+                ok_start = self._run_host_action("stack_start", ["bash", str(SCRIPT_PATH), "--start"], timeout=1800)
+                if ok_delete or ok_start:
+                    self.last_guard_actions["stack_recycle"] = time.time()
+                    self.guard_level = 1
+                    return
+
+        # Level 2: restart docker service.
+        if self.guard_level <= 1 and self._can_run_action("docker_restart", cooldown):
+            ok = self._run_host_action("docker_restart", ["sh", "-c", "sudo systemctl restart docker || systemctl restart docker"], timeout=180)
+            if ok:
+                self.guard_level = 2
+                return
+
+        # Level 3: host reboot (optional).
+        if auto_reboot and self.guard_level <= 2 and self._can_run_action("host_reboot", cooldown):
+            ok = self._run_host_action(
+                "host_reboot",
+                ["sh", "-c", "sudo shutdown -r +1 'internetincome host guard critical' || shutdown -r +1 'internetincome host guard critical'"],
+                timeout=30,
+            )
+            if ok:
+                self.guard_level = 3
 
     def check_proxy_online(self, host: str, port: str, timeout: float = 2.5) -> bool:
         try:
@@ -605,6 +757,14 @@ class MonitorService:
             proxy_state = self.refresh_proxy_state(proxies)
             host = get_host_metrics()
             usage = get_container_usage(known)
+            critical, reasons = self.evaluate_host_critical(cfg, host)
+            self.last_critical_reasons = reasons
+            if critical:
+                self.critical_streak += 1
+                self.event(f"host-guard critical streak={self.critical_streak} reasons={'; '.join(reasons)}")
+            else:
+                self.critical_streak = 0
+            self.host_guard_escalation(cfg, critical)
 
             with self.lock:
                 self.state.update(
@@ -614,6 +774,15 @@ class MonitorService:
                         "proxies": proxy_state,
                         "containers": containers,
                         "usage": usage,
+                        "host_guard": {
+                            "enabled": bool(cfg.get("ENABLE_HOST_GUARD", True)),
+                            "auto_reboot_on_critical": bool(cfg.get("AUTO_REBOOT_ON_CRITICAL", False)),
+                            "critical": critical,
+                            "critical_streak": self.critical_streak,
+                            "guard_level": self.guard_level,
+                            "reasons": reasons,
+                            "last_actions": self.last_guard_actions,
+                        },
                     }
                 )
 

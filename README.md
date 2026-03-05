@@ -5,6 +5,7 @@ Stack ottimizzato per Raspberry Pi e mini PC 4GB:
 - Docker + proxy
 - dashboard admin moderna
 - monitoraggio continuo + auto-healing
+- host guard con escalation anti-crash (fino a reboot opzionale)
 
 ## Funzioni principali
 - Start graduale degli stack (evita picchi su hardware debole)
@@ -12,6 +13,10 @@ Stack ottimizzato per Raspberry Pi e mini PC 4GB:
 - Check proxy pre-avvio e monitor online/offline continuo
 - Storico downtime proxy (offline now + total offline)
 - Auto-restart container con cooldown
+- Host Guard: rileva condizioni critiche host (CPU/RAM/Disk/Load) e applica escalation automatica:
+  - recycle stack (`--delete` + `--start`)
+  - restart Docker
+  - reboot host (se `AUTO_REBOOT_ON_CRITICAL=true`)
 - Metriche host (CPU, RAM, uptime) e usage container in dashboard
 - Salvataggio link EarnApp in `earnapp-links.txt`
 
@@ -86,3 +91,5 @@ bash internetIncome.sh --deleteBackup
 - `START_DELAY_SEC` riduce i picchi di avvio
 - `AUTO_HEAL=true` riavvia i container stopped automaticamente
 - `PROXY_CHECK_INTERVAL_SEC` controlla periodicamente i proxy
+- `ENABLE_HOST_GUARD=true` abilita la protezione host
+- `AUTO_REBOOT_ON_CRITICAL=true` abilita reboot automatico come ultima risorsa

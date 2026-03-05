@@ -46,8 +46,13 @@
       <div class="stats-grid secondary">
         <div class="stat"><span>CPU host</span><strong id="hostCpu">0%</strong></div>
         <div class="stat"><span>RAM host</span><strong id="hostMem">0%</strong></div>
+        <div class="stat"><span>Disk host</span><strong id="hostDisk">0%</strong></div>
+        <div class="stat"><span>Load host</span><strong id="hostLoad">0</strong></div>
+      </div>
+      <div class="stats-grid secondary">
         <div class="stat"><span>Uptime host</span><strong id="hostUptime">-</strong></div>
         <div class="stat"><span>Known</span><strong id="knownCount">0</strong></div>
+        <div class="stat"><span>Host Guard</span><strong id="hostGuard">idle</strong></div>
       </div>
     </section>
 
@@ -58,6 +63,8 @@
         <label>Use Proxies <select id="USE_PROXIES"><option value="true">true</option><option value="false">false</option></select></label>
         <label>Enable Logs <select id="ENABLE_LOGS"><option value="false">false</option><option value="true">true</option></select></label>
         <label>Auto Heal <select id="AUTO_HEAL"><option value="true">true</option><option value="false">false</option></select></label>
+        <label>Enable Host Guard <select id="ENABLE_HOST_GUARD"><option value="true">true</option><option value="false">false</option></select></label>
+        <label>Auto Reboot Critical <select id="AUTO_REBOOT_ON_CRITICAL"><option value="true">true</option><option value="false">false</option></select></label>
         <label>Check Proxy Before Start <select id="CHECK_PROXY_BEFORE_START"><option value="true">true</option><option value="false">false</option></select></label>
         <label>EarnApp Image <input id="EARNAPP_IMAGE" type="text"></label>
         <label>Tun Image <input id="TUN_IMAGE" type="text"></label>
@@ -71,6 +78,12 @@
         <label>Delay Tun->Earn Sec <input id="DELAY_BETWEEN_TUN_AND_EARNAPP_SEC" type="text"></label>
         <label>Max Stacks <input id="MAX_STACKS" type="text"></label>
         <label>Restart Cooldown Sec <input id="AUTO_RESTART_COOLDOWN_SEC" type="text"></label>
+        <label>Host Action Cooldown Sec <input id="HOST_ACTION_COOLDOWN_SEC" type="text"></label>
+        <label>Critical Streak Threshold <input id="CRITICAL_STREAK_THRESHOLD" type="text"></label>
+        <label>CPU Critical % <input id="CPU_CRITICAL_PERCENT" type="text"></label>
+        <label>MEM Critical % <input id="MEM_CRITICAL_PERCENT" type="text"></label>
+        <label>DISK Critical % <input id="DISK_CRITICAL_PERCENT" type="text"></label>
+        <label>Load Critical / CPU <input id="LOAD_CRITICAL_PER_CPU" type="text"></label>
         <label>Monitor Interval Sec <input id="MONITOR_INTERVAL_SEC" type="text"></label>
         <label>Proxy Check Interval Sec <input id="PROXY_CHECK_INTERVAL_SEC" type="text"></label>
         <label>EarnApp Platform <input id="EARNAPP_PLATFORM" type="text"></label>

@@ -1,8 +1,9 @@
 const fields = [
-  "DEVICE_NAME", "USE_PROXIES", "ENABLE_LOGS", "AUTO_HEAL", "CHECK_PROXY_BEFORE_START",
+  "DEVICE_NAME", "USE_PROXIES", "ENABLE_LOGS", "AUTO_HEAL", "ENABLE_HOST_GUARD", "AUTO_REBOOT_ON_CRITICAL", "CHECK_PROXY_BEFORE_START",
   "EARNAPP_IMAGE", "TUN_IMAGE", "TUN_LOG_LEVEL", "EARNAPP_CPUS", "EARNAPP_MEMORY",
   "TUN_CPUS", "TUN_MEMORY", "PIDS_LIMIT", "START_DELAY_SEC", "DELAY_BETWEEN_TUN_AND_EARNAPP_SEC", "MAX_STACKS",
-  "AUTO_RESTART_COOLDOWN_SEC", "MONITOR_INTERVAL_SEC", "PROXY_CHECK_INTERVAL_SEC",
+  "AUTO_RESTART_COOLDOWN_SEC", "HOST_ACTION_COOLDOWN_SEC", "CRITICAL_STREAK_THRESHOLD", "CPU_CRITICAL_PERCENT", "MEM_CRITICAL_PERCENT",
+  "DISK_CRITICAL_PERCENT", "LOAD_CRITICAL_PER_CPU", "MONITOR_INTERVAL_SEC", "PROXY_CHECK_INTERVAL_SEC",
   "EARNAPP_PLATFORM", "TUN_PLATFORM"
 ];
 
@@ -162,7 +163,12 @@ async function fetchState() {
   const host = state.monitor?.host || {};
   $("hostCpu").textContent = `${host.cpu_percent || 0}%`;
   $("hostMem").textContent = `${host.mem_percent || 0}%`;
+  $("hostDisk").textContent = `${host.disk_percent || 0}%`;
+  $("hostLoad").textContent = `${host.load1 || 0}`;
   $("hostUptime").textContent = host.uptime || "-";
+  const hg = state.monitor?.host_guard || {};
+  const guardLabel = hg.critical ? `critical L${hg.guard_level || 0}` : "ok";
+  $("hostGuard").textContent = guardLabel;
 
   $("proxiesBox").value = (state.proxies || []).join("\n");
   renderProxyTable(state.monitor?.proxies || []);
