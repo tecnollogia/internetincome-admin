@@ -121,6 +121,29 @@ function renderUsageTable(items) {
   `;
 }
 
+function renderEarnappMapTable(items) {
+  if (!items || items.length === 0) {
+    $("earnappMapTable").innerHTML = '<div class="row">Nessuna associazione disponibile.</div>';
+    return;
+  }
+  const rows = items.map((r) => `
+    <tr>
+      <td>#${r.index}</td>
+      <td><code>${r.earnapp_container || "-"}</code><br><span class="${(r.earnapp_status || "").toLowerCase().startsWith("up") ? "status-ok" : "status-off"}">${r.earnapp_status || "-"}</span></td>
+      <td><code>${r.tun_container || "-"}</code><br><span class="${(r.tun_status || "").toLowerCase().startsWith("up") ? "status-ok" : "status-off"}">${r.tun_status || "-"}</span></td>
+      <td><code>${r.proxy || "-"}</code></td>
+      <td>${r.earnapp_link ? `<a href="${r.earnapp_link}" target="_blank" rel="noopener noreferrer">${r.earnapp_link}</a>` : "-"}</td>
+    </tr>
+  `).join("");
+
+  $("earnappMapTable").innerHTML = `
+    <table class="table">
+      <thead><tr><th>ID</th><th>EarnApp Container</th><th>TUN Container</th><th>Proxy</th><th>EarnApp Link</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 async function fetchState() {
   const res = await fetch("/api/state");
   if (!res.ok) throw new Error("Errore caricamento stato");
@@ -144,6 +167,7 @@ async function fetchState() {
   $("proxiesBox").value = (state.proxies || []).join("\n");
   renderProxyTable(state.monitor?.proxies || []);
   renderUsageTable(state.monitor?.usage || []);
+  renderEarnappMapTable(state.earnapp_stacks || []);
 
   const links = (state.links || []).map((link) => `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>`);
   renderRows("linksList", links, "Nessun link disponibile.");

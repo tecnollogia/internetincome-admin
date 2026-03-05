@@ -345,6 +345,94 @@ def get_container_usage(names: list[str]) -> list[dict[str, Any]]:
     return usage
 
 
+def get_container_env_map(names: list[str], keys: set[str]) -> dict[str, dict[str, str]]:
+    if not names or not keys:
+        return {}
+
+    rc, out, _ = run_cmd(["docker", "inspect", "--format", "{{.Name}}|{{json .Config.Env}}", *names], timeout=20)
+    if rc != 0:
+        return {}
+
+    env_map: dict[str, dict[str, str]] = {}
+    for row in out.splitlines():
+        if "|" not in row:
+            continue
+        raw_name, raw_env = row.split("|", 1)
+        name = raw_name.strip().lstrip("/")
+        try:
+            env_list = json.loads(raw_env.strip())
+        except Exception:
+            continue
+        if not isinstance(env_list, list):
+            continue
+
+        picked: dict[str, str] = {}
+        for item in env_list:
+            if not isinstance(item, str) or "=" not in item:
+                continue
+            k, v = item.split("=", 1)
+            if k in keys:
+                picked[k] = v
+        env_map[name] = picked
+    return env_map
+
+
+def build_earnapp_stack_rows(known: list[str], monitor_state: dict[str, Any], links: list[str]) -> list[dict[str, Any]]:
+    status_by_name: dict[str, str] = {}
+    for item in monitor_state.get("containers", {}).get("running", []):
+        status_by_name[item.get("name", "")] = item.get("status", "running")
+    for item in monitor_state.get("containers", {}).get("stopped", []):
+        status_by_name[item.get("name", "")] = item.get("status", "stopped")
+    for name in monitor_state.get("containers", {}).get("missing", []):
+        status_by_name[name] = "missing"
+
+    env_map = get_container_env_map(known, {"EARNAPP_UUID", "PROXY"})
+
+    links_by_uuid: dict[str, str] = {}
+    for link in links:
+        m = re.search(r"/r/([^/\s]+)$", link)
+        if m:
+            links_by_uuid[m.group(1)] = link
+
+    stacks: dict[tuple[str, int], dict[str, Any]] = {}
+    for name in known:
+        m = re.match(r"^(earnapp|tun)([a-f0-9]+)_(\d+)$", name)
+        if not m:
+            continue
+        kind, session, idx_raw = m.groups()
+        idx = int(idx_raw)
+        key = (session, idx)
+        row = stacks.setdefault(
+            key,
+            {
+                "session": session,
+                "index": idx,
+                "earnapp_container": "",
+                "earnapp_status": "",
+                "tun_container": "",
+                "tun_status": "",
+                "proxy": "",
+                "earnapp_uuid": "",
+                "earnapp_link": "",
+            },
+        )
+        if kind == "earnapp":
+            row["earnapp_container"] = name
+            row["earnapp_status"] = status_by_name.get(name, "unknown")
+            uuid = env_map.get(name, {}).get("EARNAPP_UUID", "")
+            if uuid:
+                row["earnapp_uuid"] = uuid
+                row["earnapp_link"] = links_by_uuid.get(uuid, f"https://earnapp.com/r/{uuid}")
+        else:
+            row["tun_container"] = name
+            row["tun_status"] = status_by_name.get(name, "unknown")
+            row["proxy"] = env_map.get(name, {}).get("PROXY", "")
+
+    rows = list(stacks.values())
+    rows.sort(key=lambda r: (r["session"], r["index"]))
+    return rows
+
+
 @dataclass
 class ProxyRuntime:
     key: str
@@ -587,6 +675,7 @@ def build_state() -> dict[str, Any]:
     links = read_links()
     known = list_known_containers()
     monitor_state = monitor.snapshot()
+    earnapp_stacks = build_earnapp_stack_rows(known, monitor_state, links)
 
     running = monitor_state.get("containers", {}).get("running", [])
     stopped = monitor_state.get("containers", {}).get("stopped", [])
@@ -599,6 +688,7 @@ def build_state() -> dict[str, Any]:
         "links": links,
         "known_container_count": len(known),
         "proxy_count": len(proxies),
+        "earnapp_stacks": earnapp_stacks,
         "busy": command_lock.locked(),
         "recent_commands": list(recent_commands),
         "monitor": monitor_state,
